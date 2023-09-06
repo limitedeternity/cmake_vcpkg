@@ -26,18 +26,30 @@ set(VCPKG_INSTALLED_DIR "${CMAKE_SOURCE_DIR}/vcpkg-installed")
 
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
-macro(VCPkgAddPackage NAME VERSION)
+function(VCPkgAddPackage)
+    set(ARG_LIST NAME VERSION)
+    cmake_parse_arguments(ARG "" "${ARG_LIST}" "" ${ARGN})
+
+    if(NOT DEFINED ARG_NAME)
+        message(FATAL_ERROR "Usage: ${CMAKE_CURRENT_FUNCTION}(NAME <name> [VERSION <version>])")
+    endif()
+
     execute_process(
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        COMMAND ${Python3_EXECUTABLE} _vcpkg/add_package.py ${NAME} --version ${VERSION}
+        COMMAND ${Python3_EXECUTABLE} _vcpkg/add_package.py ${ARG_NAME} --version ${ARG_VERSION}
+        COMMAND_ERROR_IS_FATAL ANY
     )
-endmacro()
+endfunction()
 
 ################################################################################
 # Update vcpkg manifest
 ################################################################################
 
-VCPkgAddPackage(Boost 1.82.0)
+set(BOOST_INSTALL_VERSION 1.82.0)
+
+VCPkgAddPackage(NAME boost-system VERSION ${BOOST_INSTALL_VERSION})
+VCPkgAddPackage(NAME boost-filesystem VERSION ${BOOST_INSTALL_VERSION})
+VCPkgAddPackage(NAME boost-container VERSION ${BOOST_INSTALL_VERSION})
 
 ################################################################################
 # Setup vcpkg packages
@@ -50,7 +62,7 @@ set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_STATIC_RUNTIME OFF)
 
 find_package(
-    Boost 1.82.0 EXACT
+    Boost ${BOOST_INSTALL_VERSION} EXACT
     COMPONENTS system filesystem container
     REQUIRED
 )

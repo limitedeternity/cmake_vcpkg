@@ -92,9 +92,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("name", type=str.lower)
-    parser.add_argument("--version")
+    parser.add_argument("--version", nargs="?")
 
     parsed_args = parser.parse_args()
-    print(f"-- vcpkg: Adding package {parsed_args.name}@{parsed_args.version}")
+    print(
+        f"-- vcpkg: Adding package {parsed_args.name}@{parsed_args.version or 'latest'}"
+    )
 
     add_package(parsed_args)
