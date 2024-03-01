@@ -50,7 +50,7 @@ def validate_config(model: Any, instance: Any) -> bool:
 
 
 def add_package(args: argparse.Namespace) -> None:
-    root = Path(__file__).parent.parent
+    root = Path(__file__).resolve().parent.parent
     vcpkg_json_path = root / "vcpkg.json"
 
     vcpkg_json: VCPkgJson = {
