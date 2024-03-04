@@ -2,8 +2,8 @@
 # Setup CPM
 ################################################################################
 
+set(CPM_DOWNLOAD_ALL ON)
 set(CPM_SOURCE_CACHE "${CMAKE_SOURCE_DIR}/cpm-cache")
-set(CPM_USE_NAMED_CACHE_DIRECTORIES ON)
 
 include(CMake/CPM.cmake)
 
@@ -21,10 +21,18 @@ CPMAddPackage(
     GIT_SHALLOW FALSE
 )
 
-set(VCPKG_MANIFEST_DIR "${CMAKE_SOURCE_DIR}")
+set(ENV{VCPKG_DEFAULT_BINARY_CACHE} "${CMAKE_SOURCE_DIR}/vcpkg-cache/${VCPKG_TARGET_TRIPLET}")
 set(VCPKG_INSTALLED_DIR "${CMAKE_SOURCE_DIR}/vcpkg-installed")
 
-find_package(Python3 COMPONENTS Interpreter REQUIRED)
+if(NOT EXISTS "$ENV{VCPKG_DEFAULT_BINARY_CACHE}")
+    file(MAKE_DIRECTORY "$ENV{VCPKG_DEFAULT_BINARY_CACHE}")
+endif()
+
+if(DEFINED ENV{PYENV_ROOT})
+    find_program(Python3_EXECUTABLE py REQUIRED)
+else()
+    find_package(Python3 COMPONENTS Interpreter REQUIRED)
+endif()
 
 function(VCPkgAddPackage)
     set(ARG_LIST NAME VERSION)
@@ -46,10 +54,9 @@ endfunction()
 ################################################################################
 
 set(BOOST_INSTALL_VERSION 1.82.0)
-
-VCPkgAddPackage(NAME boost-system VERSION ${BOOST_INSTALL_VERSION})
+VCPkgAddPackage(NAME boost-system     VERSION ${BOOST_INSTALL_VERSION})
+VCPkgAddPackage(NAME boost-container  VERSION ${BOOST_INSTALL_VERSION})
 VCPkgAddPackage(NAME boost-filesystem VERSION ${BOOST_INSTALL_VERSION})
-VCPkgAddPackage(NAME boost-container VERSION ${BOOST_INSTALL_VERSION})
 
 ################################################################################
 # Setup vcpkg packages
@@ -57,12 +64,10 @@ VCPkgAddPackage(NAME boost-container VERSION ${BOOST_INSTALL_VERSION})
 
 include("${vcpkg_SOURCE_DIR}/scripts/buildsystems/vcpkg.cmake")
 
-set(Boost_USE_MULTITHREADED ON)
-set(Boost_USE_STATIC_LIBS OFF)
-set(Boost_USE_STATIC_RUNTIME OFF)
-
 find_package(
     Boost ${BOOST_INSTALL_VERSION} EXACT
-    COMPONENTS system filesystem container
+    COMPONENTS system
+               container
+               filesystem
     REQUIRED
 )
