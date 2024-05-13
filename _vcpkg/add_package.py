@@ -3,10 +3,15 @@ from collections import OrderedDict
 import json
 from numbers import Number
 from pathlib import Path
+import re
 from typing import Any, List, TypedDict, get_origin, get_args
 
-Dependency = TypedDict("Dependency", {"name": str})
+Dependency = TypedDict(
+    "Dependency", {"name": str, "default-features": bool, "features": List[str]}
+)
+
 Override = TypedDict("Override", {"name": str, "version": str})
+
 VCPkgJson = TypedDict(
     "VCPkgJson",
     {
@@ -55,10 +60,10 @@ def add_package(args: argparse.Namespace) -> None:
 
     vcpkg_json: VCPkgJson = {
         "name": root.name,
-        "version-semver": "0.1.0",
+        "version-semver": "1.0.0",
         "dependencies": [],
         "overrides": [],
-        "builtin-baseline": "9edb1b8e590cc086563301d735cae4b6e732d2d2",
+        "builtin-baseline": "74808c9892fcece2012b65c2ebcc1fa128db9c93",
     }
 
     if vcpkg_json_path.exists():
@@ -70,19 +75,46 @@ def add_package(args: argparse.Namespace) -> None:
                 f"Validation failed: {vcpkg_json_path.name} didn't match type annotations"
             )
 
-    for depend in vcpkg_json["dependencies"]:
-        if depend["name"] == args.name:
+    match = re.match(r"^([a-z0-9-]+)(?:\[(.+)])?$", args.name)
+
+    if not match:
+        raise AssertionError(
+            f"Validation failed: {args.name!r} is not a valid package name"
+        )
+
+    package_name, package_features = match.groups(default="")
+    package_feature_list: List[str] = list(
+        filter(None, map(str.strip, package_features.split(",")))
+    )
+
+    dependency_obj: Dependency = {
+        "name": package_name,
+        "default-features": not bool(package_feature_list),
+        "features": package_feature_list,
+    }
+
+    for index, dependency in enumerate(
+        vcpkg_json["dependencies"]
+    ):  # type: int, Dependency
+        if dependency["name"] == dependency_obj["name"]:
+            vcpkg_json["dependencies"][index] = dependency_obj
             break
+
     else:
-        vcpkg_json["dependencies"].append({"name": args.name})
+        vcpkg_json["dependencies"].append(dependency_obj)
+
+    override_obj: Override = {"name": package_name, "version": args.version}
 
     if args.version:
-        for index, depend in enumerate(vcpkg_json["overrides"]):
-            if depend["name"] == args.name:
-                vcpkg_json["overrides"][index]["version"] = args.version
+        for index, override in enumerate(
+            vcpkg_json["overrides"]
+        ):  # type: int, Override
+            if override["name"] == override_obj["name"]:
+                vcpkg_json["overrides"][index] = override_obj
                 break
+
         else:
-            vcpkg_json["overrides"].append({"name": args.name, "version": args.version})
+            vcpkg_json["overrides"].append(override_obj)
 
     with vcpkg_json_path.open(mode="w", encoding="utf-8") as f:
         json.dump(vcpkg_json, f, ensure_ascii=False, indent=2)

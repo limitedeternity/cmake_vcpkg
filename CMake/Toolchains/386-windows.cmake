@@ -4,6 +4,9 @@ set(CMAKE_SYSTEM_NAME Windows CACHE INTERNAL "")
 set(CMAKE_SYSTEM_PROCESSOR X86 CACHE INTERNAL "")
 set(CMAKE_SYSTEM_VERSION 6.1 CACHE INTERNAL "")
 
+set(CMAKE_C_COMPILER_TARGET "i686-pc-windows-msvc" CACHE INTERNAL "")
+set(CMAKE_CXX_COMPILER_TARGET "i686-pc-windows-msvc" CACHE INTERNAL "")
+
 function(msvc_inherit_from_vcvars ARCH)
     execute_process(
         COMMAND cmd /c "if defined DevEnvDir (exit 1)"
@@ -91,14 +94,30 @@ if(NOT DEFINED CMAKE_GENERATOR)
 endif()
 
 if("${CMAKE_GENERATOR}" STREQUAL "Visual Studio 17 2022")
+    set(CMAKE_VS_GLOBALS
+        "VcpkgEnabled=false"
+        "TrackFileAccess=false"
+        "UseMultiToolTask=true"
+        "DebugInformationFormat=OldStyle"
+    )
+
+    set(CMAKE_GENERATOR_PLATFORM Win32,version=10.0.22000.0 CACHE INTERNAL "")
+
     if("${CMAKE_HOST_SYSTEM_PROCESSOR}" STREQUAL "AMD64")
         msvc_inherit_from_vcvars(x64_x86)
+        list(APPEND CMAKE_VS_GLOBALS
+            "LLVMInstallDir=$ENV{VCINSTALLDIR}\\Tools\\Llvm\\x64"
+        )
+
+        set(CMAKE_GENERATOR_TOOLSET ClangCL,host=x64 CACHE INTERNAL "")
     else()
         msvc_inherit_from_vcvars(x86)
-    endif()
+        list(APPEND CMAKE_VS_GLOBALS
+            "LLVMInstallDir=$ENV{VCINSTALLDIR}\\Tools\\Llvm"
+        )
 
-    set(CMAKE_GENERATOR_TOOLSET ClangCL,host=x86 CACHE INTERNAL "")
-    set(CMAKE_GENERATOR_PLATFORM Win32 CACHE INTERNAL "")
+        set(CMAKE_GENERATOR_TOOLSET ClangCL,host=x86 CACHE INTERNAL "")
+    endif()
 endif()
 
 cmake_path(GET CMAKE_CURRENT_LIST_FILE STEM TOOLCHAIN_STEM)
