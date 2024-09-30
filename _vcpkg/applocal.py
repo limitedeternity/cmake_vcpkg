@@ -14,7 +14,9 @@ def applocal_copy(args: argparse.Namespace) -> None:
         print(f"Failed to parse binary: '{args.target_binary}'", file=sys.stderr)
         sys.exit(1)
 
-    for dependency in binary_repr.libraries:
+    for dependency in binary_repr.abstract.libraries:
+        dependency = Path(dependency).name
+
         if (dst := args.target_binary.parent / dependency).is_file():
             continue
 

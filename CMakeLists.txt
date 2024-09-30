@@ -22,6 +22,7 @@ CPMAddPackage(
 )
 
 set(ENV{VCPKG_DEFAULT_BINARY_CACHE} "${CMAKE_SOURCE_DIR}/vcpkg-cache/${VCPKG_TARGET_TRIPLET}")
+set(VCPKG_MANIFEST_DIR "${CMAKE_SOURCE_DIR}")
 set(VCPKG_INSTALLED_DIR "${CMAKE_SOURCE_DIR}/vcpkg-installed")
 set(VCPKG_APPLOCAL_DEPS OFF)
 
@@ -45,7 +46,7 @@ function(VCPkgAddPackage)
 
     execute_process(
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        COMMAND ${Python3_EXECUTABLE} _vcpkg/add_package.py ${ARG_NAME} --version ${ARG_VERSION}
+        COMMAND ${Python3_EXECUTABLE} _vcpkg/add_package.py ${ARG_NAME} --version ${ARG_VERSION} --outdir ${VCPKG_MANIFEST_DIR}
         COMMAND_ERROR_IS_FATAL ANY
     )
 endfunction()
@@ -101,12 +102,6 @@ function(add_executable)
         return()
     endif()
 
-    list(FIND ARGV "MACOSX_BUNDLE" MACOSX_BUNDLE_IDX)
-
-    if(APPLE AND MACOSX_BUNDLE_IDX EQUAL "-1")
-        return()
-    endif()
-
     add_applocal_command("${target_name}")
 endfunction()
 
@@ -138,3 +133,24 @@ find_package(
                filesystem
     REQUIRED
 )
+
+################################################################################
+# Sub-projects
+################################################################################
+
+function(get_bash_binary output)
+    if(WIN32)
+        find_program(GIT_EXE git REQUIRED)
+        cmake_path(GET GIT_EXE PARENT_PATH GIT_DIR_UNK)
+        cmake_path(GET GIT_DIR_UNK PARENT_PATH GIT_DIR_ROOT)
+        cmake_path(APPEND GIT_DIR_ROOT "bin" OUTPUT_VARIABLE GIT_DIR_BIN)
+
+        find_program(BASH_EXE bash PATHS "${GIT_DIR_BIN}" NO_DEFAULT_PATH REQUIRED)
+        set(${output} "${BASH_EXE}" PARENT_SCOPE)
+    else()
+        find_program(BASH_EXE bash REQUIRED)
+        set(${output} "${BASH_EXE}" PARENT_SCOPE)
+    endif()
+endfunction()
+
+get_bash_binary(bash_bin)
